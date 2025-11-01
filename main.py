@@ -1,32 +1,22 @@
 from fastapi import FastAPI
-import httpx, os, time
-from functools import lru_cache
+from fastapi.middleware.cors import CORSMiddleware
+from .routers import forecast, qa, backtest
 
-app = FastAPI()
-API_KEY - os.getenv("")
+app = FastAPI(title="Umbrella.ai", version="0.1.0")
 
-@lru_cache(maxsize=256)
-def _cache_key(lat, lon, hour):
-    return f"{round(lat, 3)}:{round(lon, 3)}:{hour}"
+# CORS for local dev
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/api/forecast")
-async def forecast(lat: float, long: float):
-    # Fetch from provider
-    async with httpx.AsyncClient(timeout=10) as client:
-        r = await client.get("", params={"lat": lat, "lon": lon, "key": API_KEY})
-        data = r.json()
-    # Compute Umbrella Score + Alerts
-    hourly = data["hourly"][:48]
-    score = compute_umbrella_score(hourly)
-    alerts = make_alerts(hourly)
-    summary = make_summary(data)
-    return {"hourly": hourly, "daily": data.get("daily", []), "summary": summary, "umbrellaScore": score, "alerts": alerts}
+@app.get("/")
+def root():
+    return {"status": "ok", "app": "Umbrella.ai"}
 
-def compute_umbrella_score(hourly):
-    def norm_intensity(mm):
-        return max(0, min(1, mm / 5.0))
-    p = max(h.get("precip_prob", 0) for h in hourly[:12]) / 100.0
-    i = norm_intensity(max(h.get("precip_mm", 0) for h in hourly[:12]))
-    w = min(1.0, (max(h.get("wind_kph", 0) for h in hourly[:12]) / 40.0))
-    d = sum(1 for h in hourly[:12] if h.get("precip_prob", 0) >= 50) / 12.0
-    return round(100 * (0.55*p + 0.25*i + 0.15*d + 0.05*w))
+app.include_router(forecast.router, prefix="/api")
+app.include_router(qa.router, prefix="/api")
+app.include_router(backtest.router, prefix="/api")
