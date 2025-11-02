@@ -68,19 +68,19 @@ Enjoy — let me know if you'd like a prettier GUI, charts, or local city autoco
 
 
 Sources:
-https://open-meteo.com/
-https://nominatim.openstreetmap.org/ui/search.html
-https://www.openstreetmap.org/copyright
-https://operations.osmfoundation.org/policies/nominatim/
-https://fonts.google.com/specimen/Inter
+https://open-meteo.com/,
+https://nominatim.openstreetmap.org/ui/search.html,
+https://www.openstreetmap.org/copyright,
+https://operations.osmfoundation.org/policies/nominatim/,
+https://fonts.google.com/specimen/Inter,
 
 Python Sources:
-https://fastapi.tiangolo.com/ (FastAPI)
-https://uvicorn.dev/ (Uvicorn)
-https://www.python-httpx.org/ (httpx)
+https://fastapi.tiangolo.com/ (FastAPI),
+https://uvicorn.dev/ (Uvicorn),
+https://www.python-httpx.org/ (httpx),
 https://cachetools.readthedocs.io/en/latest/ (cachetools)
-https://docs.pydantic.dev/latest/ (pydantic)
-https://dateutil.readthedocs.io/en/stable/ (python-dateutil)
+https://docs.pydantic.dev/latest/ (pydantic),
+https://dateutil.readthedocs.io/en/stable/ (python-dateutil),
 
 Wind chill formula sources:
 https://www.weather.gov/epz/windChill
