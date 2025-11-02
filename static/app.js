@@ -51,100 +51,140 @@ function renderHourlyTable(hourly){
     const hue = Math.round(240 - ratio * 240);
     return `hsl(${hue} 75% 50%)`;
   }
+
   const rows = hourly.map((h, idx) => {
-    const timeStr = (() => { try { return new Date(h.time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { return h.time } })();
-    const tempValC = (h.temp_c === null || h.temp_c === undefined) ? null : Math.round(h.temp_c * 10)/10;
-    const displayTemp = tempValC === null ? '—' : (currentUnit === 'C' ? (tempValC + '°C') : (cToF(tempValC) + '°F'));
+    const tempC = (h.temp_c === null || h.temp_c === undefined) ? null : h.temp_c;
+    const tempDisplay = (currentUnit === 'F' && tempC !== null) ? cToF(tempC) + '°F' : (tempC !== null ? tempC + '°C' : '—');
+    const score = (h.umbrellaScore === null || h.umbrellaScore === undefined) ? '—' : h.umbrellaScore;
     const prob = (h.precip_prob === null || h.precip_prob === undefined) ? '—' : (h.precip_prob + '%');
     const mm = (h.precip_mm === null || h.precip_mm === undefined) ? '—' : (Math.round(h.precip_mm*10)/10 + ' mm');
     const wind = (h.wind_kph === null || h.wind_kph === undefined) ? '—' : (Math.round(h.wind_kph*10)/10 + ' kph');
-    const scoreVal = (h.umbrellaScore === null || h.umbrellaScore === undefined) ? null : (h.umbrellaScore);
-    function scoreColor(score){
-      if (score === null || score === undefined || isNaN(score)) return '';
-      const s = Math.max(0, Math.min(100, score));
-      // Map 0 (green) -> 100 (red): hue from 120 (green) to 0 (red)
-      const hue = Math.round((1 - s/100) * 120);
-      return `hsl(${hue} 80% 45%)`;
+    const humidity = (h.humidity === null || h.humidity === undefined) ? '—' : (h.humidity + '%');
+    // compute wind chill in C when applicable (T <= 10°C and wind > 4.8 kph)
+    let windChillDisplay = '—';
+    if(tempC !== null && h.wind_kph !== null && h.wind_kph !== undefined){
+      const v = h.wind_kph;
+      if(tempC <= 10 && v > 4.8){
+        // Wind chill formula (C): 13.12 + 0.6215*T - 11.37*v^0.16 + 0.3965*T*v^0.16
+        const wcC = 13.12 + 0.6215 * tempC - 11.37 * Math.pow(v, 0.16) + 0.3965 * tempC * Math.pow(v, 0.16);
+        windChillDisplay = (currentUnit === 'F') ? (cToF(Math.round(wcC*10)/10) + '°F') : (Math.round(wcC*10)/10 + '°C');
+      }
     }
-    const scoreColorStyle = scoreVal === null ? '' : `style="background:${scoreColor(scoreVal)};color:${scoreVal>=50? '#ffffff' : '#0f172a'};padding:6px 8px;border-radius:999px;font-weight:700;display:inline-flex;align-items:center;gap:8px;"`;
-    const umbrellaHtml = scoreVal === null ? '—' : (`<span class="score-pill" ${scoreColorStyle}><span class="umbrella-emoji">☂️</span><span class="score-val">${scoreVal}</span>${scoreVal>=50? '<span class="bring"> • Bring</span>' : ''}</span>`);
-    const color = tempColor(tempValC);
-    const textColor = (tempValC !== null && tempValC >= 15) ? '#ffffff' : '#0f172a';
-    const tempStyle = color ? `style="background:${color};color:${textColor};"` : '';
-    return `<tr data-idx="${idx}"><td class="time clickable">${timeStr}</td><td class="temp" ${tempStyle}>${displayTemp}</td><td class="precip">${prob}</td><td class="precip-mm">${mm}</td><td class="wind">${wind}</td><td class="score">${umbrellaHtml}</td></tr>`;
-  }).join('\n');
+    const timeStr = (()=>{ try { return new Date(h.time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }); } catch(e){ return h.time } })();
+    const tempColorStyle = tempC !== null ? `style="color: ${tempColor(tempC)}"` : '';
+    return `
+      <tr data-idx="${idx}">
+        <td class="hour-time" data-idx="${idx}" tabindex="0">${timeStr}</td>
+        <td class="hour-temp" ${tempColorStyle}>${tempDisplay}<div class="temp-sub">${humidity} ${wind !== '—' ? '· ' + wind : ''} ${windChillDisplay !== '—' ? '· WC ' + windChillDisplay : ''}</div></td>
+        <td><span class="score-pill" data-idx="${idx}">${score}</span></td>
+        <td>${prob}</td>
+        <td>${mm}</td>
+        <td>${h.condition && h.condition.text ? h.condition.text : ''}</td>
+      </tr>
+    `;
+  }).join('');
+
   return `
-    <div class="hourly-wrapper card">
-      <table class="hourly-table">
-        <thead><tr><th>Time</th><th>Temp</th><th>Precip %</th><th>Precip mm</th><th>Wind</th><th>Umbrella</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
+    <table class="hourly-table">
+      <thead><tr><th>Time</th><th>Temp</th><th>Score</th><th>Precip %</th><th>Precip mm</th><th>Condition</th></tr></thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
   `;
 }
 
-// Attach click handlers to the hourly table to toggle per-hour details
-function attachHourlyClickHandlers(){
-  const tbody = document.querySelector('.hourly-table tbody');
-  if(!tbody) return;
-  // event delegation: clicking on a time cell toggles details
-  tbody.onclick = function(e){
-    const td = e.target.closest('td.time');
-    if(!td || !tbody.contains(td)) return;
-    const tr = td.closest('tr');
-    if(!tr) return;
-    const idx = parseInt(tr.getAttribute('data-idx'));
-    toggleHourDetails(tr, idx);
-  };
-}
-
-function toggleHourDetails(tr, idx){
-  // remove any existing details row
-  const existing = document.querySelector('.hour-details');
+// Floating card that shows concise details near the clicked row
+function showHourCard(evt){
+  const el = evt.currentTarget || evt.target;
+  const idx = el.getAttribute('data-idx');
+  if(idx === null) return;
+  const tr = el.closest('tr');
+  if(!tr) return;
+  // remove any existing card
+  const existing = document.querySelector('.hour-card');
   if(existing){
-    // if the existing details belong to the same row, just remove and return
-    const prev = tr.nextElementSibling;
-    if(prev && prev.classList && prev.classList.contains('hour-details')){
-      // closing the same row: remove details and unselect the row
-      prev.remove();
+    const prev = existing.getAttribute('data-idx');
+    if(String(prev) === String(idx)){
+      existing.remove();
       tr.classList.remove('selected');
       return;
     }
-    // remove selected marker from the previous row that had details
-    const prevRow = existing.previousElementSibling;
-    if(prevRow && prevRow.classList) prevRow.classList.remove('selected');
+    const prevRow = document.querySelector('.hourly-table tr.selected');
+    if(prevRow) prevRow.classList.remove('selected');
     existing.remove();
   }
-  // build details row
   if(!lastData || !lastData.hourly || !lastData.hourly[idx]) return;
   const h = lastData.hourly[idx];
   const score = (h.umbrellaScore === null || h.umbrellaScore === undefined) ? '—' : h.umbrellaScore;
   const prob = (h.precip_prob === null || h.precip_prob === undefined) ? '—' : (h.precip_prob + '%');
   const mm = (h.precip_mm === null || h.precip_mm === undefined) ? '—' : (Math.round(h.precip_mm*10)/10 + ' mm');
   const wind = (h.wind_kph === null || h.wind_kph === undefined) ? '—' : (Math.round(h.wind_kph*10)/10 + ' kph');
-  const when = (() => { try { return new Date(h.time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch(e){ return h.time } })();
-  const action = (typeof score === 'number' && score >= 60) ? 'Bring an umbrella.' : (typeof score === 'number' && score >= 40) ? 'Consider an umbrella.' : 'No umbrella needed.';
+  const humidity = (h.humidity === null || h.humidity === undefined) ? '—' : (h.humidity + '%');
+  // compute wind chill display for card (same rules as table)
+  let windChillDisplay = '—';
+  const tempC = (h.temp_c === null || h.temp_c === undefined) ? null : h.temp_c;
+  if(tempC !== null && h.wind_kph !== null && h.wind_kph !== undefined){
+    const v = h.wind_kph;
+    if(tempC <= 10 && v > 4.8){
+      const wcC = 13.12 + 0.6215 * tempC - 11.37 * Math.pow(v, 0.16) + 0.3965 * tempC * Math.pow(v, 0.16);
+      windChillDisplay = (currentUnit === 'F') ? (cToF(Math.round(wcC*10)/10) + '°F') : (Math.round(wcC*10)/10 + '°C');
+    }
+  }
+  const timeStr = (()=>{ try { return new Date(h.time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch(e){ return h.time } })();
 
-  const detailsTr = document.createElement('tr');
-  detailsTr.className = 'hour-details';
-  const td = document.createElement('td');
-  td.colSpan = 6;
-  td.innerHTML = `
-    <div class="detail-grid">
-      <div class="detail-item"><span class="label">Time</span><span class="value">${when}</span></div>
-      <div class="detail-item"><span class="label">Score</span><span class="value">${score}</span></div>
-      <div class="detail-item"><span class="label">Precip chance</span><span class="value">${prob}</span></div>
-      <div class="detail-item"><span class="label">Precip amount</span><span class="value">${mm}</span></div>
-      <div class="detail-item"><span class="label">Wind</span><span class="value">${wind}</span></div>
-      <div class="detail-item"><span class="label">Action</span><span class="value">${action}</span></div>
-    </div>
+  const card = document.createElement('div');
+  card.className = 'hour-card card';
+  card.setAttribute('data-idx', idx);
+  card.innerHTML = `
+    <button class="hour-card-close" aria-label="Close">×</button>
+    <div class="hour-card-row"><strong>${timeStr}</strong></div>
+    <div class="hour-card-row"><span class="label">Precip %</span><span class="value">${prob}</span></div>
+    <div class="hour-card-row"><span class="label">Precip mm</span><span class="value">${mm}</span></div>
+    <div class="hour-card-row"><span class="label">Wind</span><span class="value">${wind}</span></div>
+    <div class="hour-card-row"><span class="label">Wind chill</span><span class="value">${windChillDisplay}</span></div>
+    <div class="hour-card-row"><span class="label">Umbrella</span><span class="value">${score}</span></div>
   `;
-  detailsTr.appendChild(td);
-  tr.parentNode.insertBefore(detailsTr, tr.nextSibling);
-  // mark this row as selected to change the score pill appearance
+  document.body.appendChild(card);
+
+  // position
+  const rect = tr.getBoundingClientRect();
+  const cardWidth = 260;
+  const spaceRight = window.innerWidth - rect.right;
+  if(spaceRight > cardWidth + 16){
+    card.style.position = 'absolute';
+    card.style.left = (rect.right + window.scrollX + 8) + 'px';
+    card.style.top = (rect.top + window.scrollY) + 'px';
+  } else if (rect.left > cardWidth + 16){
+    card.style.position = 'absolute';
+    card.style.left = Math.max(8, rect.left + window.scrollX - cardWidth - 8) + 'px';
+    card.style.top = (rect.top + window.scrollY) + 'px';
+  } else {
+    card.style.position = 'fixed';
+    card.style.left = '50%';
+    card.style.transform = 'translateX(-50%)';
+    card.style.bottom = '16px';
+    card.style.top = 'auto';
+  }
+
   tr.classList.add('selected');
-  // scroll the details into view
-  detailsTr.scrollIntoView({behavior:'smooth', block:'nearest'});
+  card.querySelector('.hour-card-close').addEventListener('click', ()=>{ card.remove(); tr.classList.remove('selected'); });
+  setTimeout(()=>{
+    const onDocClick = (ev)=>{
+      if(!card.contains(ev.target) && !tr.contains(ev.target)){
+        card.remove(); tr.classList.remove('selected'); document.removeEventListener('click', onDocClick);
+      }
+    };
+    document.addEventListener('click', onDocClick);
+  }, 50);
+}
+
+function attachHourlyClickHandlers(){
+  const times = document.querySelectorAll('.hour-time');
+  times.forEach(t => {
+    t.addEventListener('click', showHourCard);
+    t.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showHourCard(e); } });
+  });
 }
 
 function renderForecast(data){
