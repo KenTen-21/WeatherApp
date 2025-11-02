@@ -1,0 +1,40 @@
+body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f7fafc;color:#0f172a}
+.container{max-width:880px;margin:36px auto;padding:18px}
+.form{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.form label{display:flex;flex-direction:column;font-size:14px}
+.form input{padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1}
+button{padding:8px 12px;border-radius:8px;border:0;background:#2563eb;color:white}
+.card{background:white;padding:12px;border-radius:8px;box-shadow:0 1px 4px rgba(2,6,23,0.06);margin-top:12px}
+pre{white-space:pre-wrap}
+
+/* Status badge styles */
+.status-row{display:flex;gap:12px;align-items:center}
+.status{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:600;font-size:13px}
+.status.idle{background:#e6eef8;color:#0f172a}
+.status.loading{background:#fff4e6;color:#7c2d12}
+.status.ok{background:#e6ffef;color:#064e3b}
+.status.error{background:#ffe6e6;color:#7f1d1d}
+.status-msg{color:#334155;font-size:14px}
+
+/* Hourly table styling */
+.hourly-wrapper{margin-top:12px;overflow:auto;background:transparent}
+.hourly-table{width:100%;border-collapse:collapse;font-size:14px}
+.hourly-table thead th{position:sticky;top:0;background:rgba(255,255,255,0.95);padding:8px;text-align:left;border-bottom:1px solid #e2e8f0}
+.hourly-table td{padding:8px;border-bottom:1px solid #f1f5f9}
+.hourly-table tr:hover td{background:#fbfdff}
+.hourly-table .time{white-space:nowrap;width:220px;color:#0f172a}
+.hourly-table .temp{font-weight:700;color:#0f172a}
+.hourly-table .precip{color:#0b5ea8}
+.hourly-table .precip-mm{color:#115e59}
+.hourly-table .wind{color:#6b7280}
+
+.forecast-summary{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.forecast-summary .score{font-size:16px}
+.forecast-summary .alerts{color:#7f1d1d}
+.forecast-summary .daily-summary{color:#334155}
+
+/* Make the hourly table readable on small screens */
+@media (max-width:600px){
+	.hourly-table thead th{font-size:12px}
+	.hourly-table td{font-size:13px;padding:6px}
+}

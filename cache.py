@@ -13,7 +13,9 @@ def memo_async(ttl_seconds: int = 600):
             if item:
                 return item
             result = await fn(*args, **kwargs)
-            _cache.ttl = ttl_seconds
+            # cachetools.TTLCache doesn't allow changing ttl on the fly via attribute assignment
+            # Use the module-level cache with its configured ttl. If per-call TTL is required,
+            # create a separate cache instance per-ttl. For now we store the result in the global cache.
             _cache[key] = result
             return result
         return wrapper

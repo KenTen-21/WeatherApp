@@ -1,6 +1,6 @@
 from typing import List, Dict
 from statistics import mean
-from .weather_provider import fetch_forecast
+from weather_provider import fetch_forecast
 
 async def backtest_simple(lat: float, lon: float, days: int = 7):
     # Demo: Compute a tiny metric from the latest forecast as placeholder

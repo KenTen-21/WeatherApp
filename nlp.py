@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from dateutil import parser as dtparser
-from .weather_provider import fetch_forecast
+from weather_provider import fetch_forecast
 
 # Regex base parser for time window e.g. "before 6pm" or "tomorrow morning"
 

@@ -1,5 +1,5 @@
 import httpx
-from ..utils.cache import memo_async
+from cache import memo_async
 
 # Using Open-Meteo
 # Docs: https://open-meteo.com/en/docs

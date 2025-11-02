@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-from ..services.nowcasting import backtest_simple
+from nowcasting import backtest_simple
 
 router = APIRouter()
 
