@@ -3,7 +3,7 @@ from typing import Optional
 import httpx
 
 from weather_provider import fetch_forecast
-from scoring import compute_umbrella_score, make_alerts
+from scoring import compute_umbrella_score, make_alerts, compute_hourly_scores
 
 router = APIRouter()
 
@@ -23,7 +23,16 @@ async def get_forecast(lat: Optional[float] = Query(None), lon: Optional[float] 
             r.raise_for_status()
             results = r.json()
         if not results:
-            raise HTTPException(status_code=404, detail=f"Could not geocode city '{city}'")
+            # Return a helpful 400 with suggestion to check spelling or provide lat/lon
+            # Include a direct Nominatim search URL so the frontend can offer it to the user
+            import urllib.parse
+            q = urllib.parse.quote_plus(city)
+            nominatim_search = f"https://nominatim.openstreetmap.org/search?q={q}&format=json&limit=5"
+            raise HTTPException(status_code=400, detail={
+                "error": f"Could not geocode city '{city}'",
+                "message": "Check the city spelling or provide latitude and longitude instead.",
+                "nominatim_search": nominatim_search,
+            })
         lat = float(results[0]["lat"])
         lon = float(results[0]["lon"])
     elif city is not None and not city.strip():
@@ -34,9 +43,18 @@ async def get_forecast(lat: Optional[float] = Query(None), lon: Optional[float] 
         raise HTTPException(status_code=400, detail="Provide either city or both lat and lon")
 
     data = await fetch_forecast(lat, lon)
-    hourly = data["hourly"][:48] if "hourly" in data else []
+    hourly = data.get("hourly", [])[:48]
+
+    # compute aggregate score (first 12 hours) and per-hour scores
     score = compute_umbrella_score(hourly)
     alerts = make_alerts(hourly)
+    per_hour_scores = compute_hourly_scores(hourly)
+
+    # attach per-hour umbrellaScore to each hourly entry
+    for h, s in zip(hourly, per_hour_scores):
+        # keep camelCase to match top-level umbrellaScore
+        h["umbrellaScore"] = s
+
     return {
         "hourly": hourly,
         "daily": data.get("daily", {}),

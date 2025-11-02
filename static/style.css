@@ -42,13 +42,29 @@ body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradie
 .hourly-table td{padding:8px;border-bottom:1px solid #f1f5f9}
 .hourly-table tr:hover td{background:#fbfdff}
 .hourly-table .time{white-space:nowrap;width:220px;color:#0f172a}
-.hourly-table .temp{font-weight:700;color:#0f172a}
+.hourly-table .temp{font-weight:700;color:#0f172a;min-width:180px}
+.hourly-table .time.clickable{cursor:pointer;text-decoration:underline dotted}
+.hour-details td{background:linear-gradient(180deg, rgba(249,250,252,0.6), rgba(255,255,255,0.6));padding:12px;border-bottom:1px solid #eef2ff;font-size:14px}
+.hour-details .detail-grid{display:flex;gap:18px;flex-wrap:wrap}
+.hour-details .detail-item{min-width:120px}
+.hour-details .detail-item .label{display:block;color:var(--muted);font-size:12px}
+.hour-details .detail-item .value{font-weight:700;margin-top:4px}
 .hourly-table .precip{color:#0b5ea8}
 .hourly-table .precip-mm{color:#115e59}
 .hourly-table .wind{color:#6b7280}
 
 .forecast-summary{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .forecast-summary .score{font-size:16px}
+
+/* Make the right-hand summary (where the Umbrella score lives) a fixed-height, sticky panel
+   so it stays visible while the hourly table scrolls. The panel will scroll internally if content
+   exceeds the height. Disabled on small screens. */
+.results-grid .forecast-summary{
+  position:sticky;
+  top:18px;
+  height:220px; /* desired visible height for the umbrella score area */
+  overflow:auto;
+}
 .forecast-summary .alerts{color:#7f1d1d}
 .forecast-summary .daily-summary{color:#334155}
 
@@ -70,3 +86,66 @@ body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradie
 /* Invalid input state */
 input.invalid{border-color: var(--danger) !important;box-shadow: 0 4px 12px rgba(239,68,68,0.08);}
 input.invalid::placeholder{color: #fca5a5}
+
+/* Score pill */
+.score-pill{padding:2px 4px;border-radius:999px;font-weight:700;display:inline-block;font-size:12px}
+.hourly-table td.score{width:48px;text-align:center;padding:4px 6px}
+
+/* Alerts styling */
+.alerts{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+.alerts h3{grid-column:1/-1;margin:0 0 4px 0;font-size:15px}
+.alert-item{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  padding:10px;
+  border-radius:10px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.4));
+  border:1px solid rgba(15,23,42,0.03);
+}
+.alert-badge{min-width:56px;text-align:center;padding:8px 10px;border-radius:999px;font-weight:800}
+.alert-badge.idle{background:#e6eef8;color:#0f172a}
+.alert-badge.loading{background:#fff7ed;color:#92400e}
+.alert-badge.danger{background:#fff1f2;color:#7f1d1d}
+.alert-body{display:flex;flex-direction:column}
+.alert-title{font-weight:700}
+.alert-time{font-size:13px;color:var(--muted);margin-top:2px}
+.alert-action{font-size:13px;color:#334155;margin-top:6px}
+
+/* Responsive adjustments: stack badge above body on narrow screens */
+@media (max-width:320px){
+  .alerts{grid-template-columns:1fr}
+  .alert-item{flex-direction:row;align-items:flex-start}
+  .alert-badge{min-width:44px;padding:6px 8px}
+}
+
+@media (max-width:420px){
+  .alert-item{flex-direction:column;align-items:flex-start}
+  .alert-badge{align-self:flex-start}
+}
+
+/* Disable sticky summary on very small screens so layout stacks naturally */
+@media (max-width:880px){
+  .results-grid .forecast-summary{position:static;height:auto;overflow:visible}
+}
+
+.score-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 4px;border-radius:999px;font-weight:700;font-size:12px}
+.umbrella-emoji{font-size:10px;line-height:1}
+.score-val{font-feature-settings: "tnum" 1;}
+.bring{font-weight:600;font-size:12px;margin-left:6px;opacity:0.95}
+
+/* On very small screens we hide the word 'Bring' to save space */
+@media (max-width:460px){
+  .bring{display:none}
+}
+
+/* Selected row: show a slightly larger score pill and tighter layout for other cells */
+.hourly-table tr.selected td.score{width:60px}
+.hourly-table tr.selected td.score .score-pill{padding:6px 8px;font-size:13px;gap:6px}
+.hourly-table tr.selected td.temp{min-width:160px}
+.hourly-table tr.selected td.time{font-weight:700}
