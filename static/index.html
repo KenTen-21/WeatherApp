@@ -5,30 +5,56 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Umbrella.ai — Demo</title>
     <link rel="stylesheet" href="/static/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div class="container">
-      <h1>Umbrella.ai — Forecast</h1>
-      <div class="form">
-        <label
-          >City
-          <input
-            id="city"
-            type="text"
-            placeholder="e.g. San Francisco"
-            value="San Francisco"
-        /></label>
-        <button id="get">Get Forecast</button>
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="logo">☂️ <span class="brand">Umbrella.ai</span></div>
+        <div class="subtitle">Quick umbrella & rain likelihood forecasts</div>
       </div>
+    </header>
 
-      <div id="status" class="card status-row">
-        <span id="statusBadge" class="status idle">Idle</span>
-        <span id="statusMsg" class="status-msg"
-          >Enter a city and click "Get Forecast"</span
-        >
-      </div>
-      <div id="result" class="card"></div>
-    </div>
+    <main class="page">
+      <section class="card search-card">
+        <div class="search-row">
+          <div class="search-input">
+            <label class="label" for="city">City</label>
+            <input
+              id="city"
+              type="text"
+              placeholder="e.g. San Francisco"
+              value="San Francisco"
+            />
+          </div>
+          <div class="search-actions">
+            <div class="unit-toggle" aria-hidden="true">
+              <button id="unitC" class="unit-btn active">°C</button>
+              <button id="unitF" class="unit-btn">°F</button>
+            </div>
+            <button id="get" class="primary">Get Forecast</button>
+          </div>
+        </div>
+        <div id="status" class="status-row">
+          <span id="statusBadge" class="status idle">Idle</span>
+          <span id="statusMsg" class="status-msg"
+            >Enter a city and click "Get Forecast"</span
+          >
+        </div>
+      </section>
+
+      <section id="result" class="results-grid">
+        <!-- Left: hourly table, Right: summary card inserted by JS -->
+      </section>
+    </main>
+
+    <footer class="site-footer">Made with ☂️ — Umbrella.ai</footer>
+
     <script src="/static/app.js"></script>
   </body>
 </html>
