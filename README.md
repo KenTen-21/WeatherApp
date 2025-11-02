@@ -65,3 +65,22 @@ py -3 -c "from fastapi.testclient import TestClient; from main import app; clien
 If you want the project converted into a package layout (so relative imports like `from .services import ...` work), I can restructure files into a package and update imports accordingly — tell me and I'll make that change.
 
 Enjoy — let me know if you'd like a prettier GUI, charts, or local city autocomplete.
+
+
+Sources:
+https://open-meteo.com/
+https://nominatim.openstreetmap.org/ui/search.html
+https://www.openstreetmap.org/copyright
+https://operations.osmfoundation.org/policies/nominatim/
+https://fonts.google.com/specimen/Inter
+
+Python Sources:
+https://fastapi.tiangolo.com/ (FastAPI)
+https://uvicorn.dev/ (Uvicorn)
+https://www.python-httpx.org/ (httpx)
+https://cachetools.readthedocs.io/en/latest/ (cachetools)
+https://docs.pydantic.dev/latest/ (pydantic)
+https://dateutil.readthedocs.io/en/stable/ (python-dateutil)
+
+Wind chill formula sources:
+https://www.weather.gov/epz/windChill
