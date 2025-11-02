@@ -70,27 +70,41 @@ function renderHourlyTable(hourly){
         windChillDisplay = (currentUnit === 'F') ? (cToF(Math.round(wcC*10)/10) + '°F') : (Math.round(wcC*10)/10 + '°C');
       }
     }
-    const timeStr = (()=>{ try { return new Date(h.time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }); } catch(e){ return h.time } })();
+  const timeStr = (()=>{ try { return new Date(h.time).toLocaleString([], { hour: '2-digit', minute: '2-digit' }); } catch(e){ return h.time } })();
+  const dayStr = (()=>{ try { return new Date(h.time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); } catch(e){ return '' } })();
     const tempColorStyle = tempC !== null ? `style="color: ${tempColor(tempC)}"` : '';
     return `
-      <tr data-idx="${idx}">
-        <td class="hour-time" data-idx="${idx}" tabindex="0">${timeStr}</td>
-        <td class="hour-temp" ${tempColorStyle}>${tempDisplay}<div class="temp-sub">${humidity} ${wind !== '—' ? '· ' + wind : ''} ${windChillDisplay !== '—' ? '· WC ' + windChillDisplay : ''}</div></td>
-        <td><span class="score-pill" data-idx="${idx}">${score}</span></td>
-        <td>${prob}</td>
-        <td>${mm}</td>
-        <td>${h.condition && h.condition.text ? h.condition.text : ''}</td>
-      </tr>
+      <div class="hour-item" data-idx="${idx}">
+        <button class="hour-summary" aria-expanded="false" data-idx="${idx}">
+          <div class="hour-left">
+            <div class="hour-day">${dayStr}</div>
+            <div class="hour-time-text">${timeStr}</div>
+          </div>
+          <div class="hour-main">
+            <div class="hour-temp" ${tempColorStyle}>${tempDisplay}</div>
+            <div class="temp-sub">${humidity}${wind !== '—' ? ' · ' + wind : ''}${windChillDisplay !== '—' ? ' · WC ' + windChillDisplay : ''}</div>
+          </div>
+        </button>
+        <div class="hour-expand" hidden>
+          <div class="detail-grid">
+            <div class="detail-item"><span class="label">Time: </span><span class="value">${new Date(h.time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+            <div class="detail-item"><span class="label">Score: </span><span class="value">${score}</span></div>
+            <div class="detail-item"><span class="label">Humidity: </span><span class="value">${h.humidity===null||h.humidity===undefined? '—' : h.humidity + '%'}</span></div>
+            <div class="detail-item"><span class="label">Wind chill:</span><span class="value">${windChillDisplay || '—'}</span></div>
+            <div class="detail-item"><span class="label">Precip chance: </span><span class="value">${prob}</span></div>
+            <div class="detail-item"><span class="label">Precip amount: </span><span class="value">${mm}</span></div>
+            <div class="detail-item"><span class="label">Wind: </span><span class="value">${wind}</span></div>
+            <div class="detail-item"><span class="label">Condition: </span><span class="value">${h.condition && h.condition.text ? h.condition.text : '—'}</span></div>
+          </div>
+        </div>
+      </div>
     `;
   }).join('');
 
   return `
-    <table class="hourly-table">
-      <thead><tr><th>Time</th><th>Temp</th><th>Score</th><th>Precip %</th><th>Precip mm</th><th>Condition</th></tr></thead>
-      <tbody>
-        ${rows}
-      </tbody>
-    </table>
+    <div class="hour-list">
+      ${rows}
+    </div>
   `;
 }
 
@@ -180,10 +194,55 @@ function showHourCard(evt){
 }
 
 function attachHourlyClickHandlers(){
-  const times = document.querySelectorAll('.hour-time');
-  times.forEach(t => {
-    t.addEventListener('click', showHourCard);
-    t.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showHourCard(e); } });
+  const summaries = document.querySelectorAll('.hour-summary');
+  summaries.forEach(btn => {
+    btn.addEventListener('click', (e)=>{
+      const item = btn.parentNode;
+      const expand = item.querySelector('.hour-expand');
+      const isOpen = btn.getAttribute('aria-expanded') === 'true';
+      // close any other opened
+      document.querySelectorAll('.hour-item.expanded').forEach(other => {
+        if(other !== item){
+          other.classList.remove('expanded');
+          const obtn = other.querySelector('.hour-summary');
+          if(obtn) obtn.setAttribute('aria-expanded','false');
+          const oexp = other.querySelector('.hour-expand'); if(oexp) oexp.hidden = true;
+        }
+      });
+      if(isOpen){
+        btn.setAttribute('aria-expanded','false');
+        expand.hidden = true;
+        item.classList.remove('expanded');
+      } else {
+        btn.setAttribute('aria-expanded','true');
+        expand.hidden = false;
+        item.classList.add('expanded');
+        // ensure the expanded area is visible
+        expand.scrollIntoView({behavior:'smooth', block:'nearest'});
+      }
+    });
+    btn.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); } });
+  });
+  // Make the temperature text selectable without toggling the card: stop propagation and select on click
+  const temps = document.querySelectorAll('.hour-temp');
+  temps.forEach(t => {
+    // allow keyboard focus for selection
+    if(!t.hasAttribute('tabindex')) t.setAttribute('tabindex','0');
+    t.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      try{
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(t);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }catch(e){}
+    });
+    t.addEventListener('keydown', (ev)=>{
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); ev.stopPropagation();
+        try{ const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(t); sel.removeAllRanges(); sel.addRange(range);}catch(e){}
+      }
+    });
   });
 }
 
@@ -223,62 +282,57 @@ function renderForecast(data){
   attachHourlyClickHandlers();
 }
 
-// hook up unit buttons
-const bC = document.getElementById('unitC');
-const bF = document.getElementById('unitF');
-if(bC && bF){
-  bC.addEventListener('click', ()=> setUnit('C'));
-  bF.addEventListener('click', ()=> setUnit('F'));
-  // initialize
+// Hook up search button behaviour (fetch forecast)
+const getBtn = document.getElementById('get');
+// Wire up unit toggle buttons so clicking °C / °F updates UI
+const unitCBtn = document.getElementById('unitC');
+const unitFBtn = document.getElementById('unitF');
+if(unitCBtn && unitFBtn){
+  unitCBtn.addEventListener('click', ()=> setUnit('C'));
+  unitFBtn.addEventListener('click', ()=> setUnit('F'));
+  // ensure visual state is correct on load
   setUnit(currentUnit);
 }
-
-document.getElementById('get').addEventListener('click', async () => {
-  const city = (cityInput && cityInput.value) ? cityInput.value : '';
-  if(!city || !city.trim()){
-    // visually mark the input and focus it for quick correction
-    if (cityInput) {
-      cityInput.classList.add('invalid');
-      cityInput.focus();
+if (getBtn) {
+  getBtn.addEventListener('click', async () => {
+    const city = (cityInput && cityInput.value) ? cityInput.value : '';
+    if(!city || !city.trim()){
+      if (cityInput) { cityInput.classList.add('invalid'); cityInput.focus(); }
+      setStatus('error','Please enter a city name');
+      return;
     }
-    setStatus('error','Please enter a city name');
-    return;
-  }
-  const result = document.getElementById('result');
-  setStatus('loading', 'Looking up ' + city + '…');
-  result.textContent = '';
-  try {
-    const res = await fetch(`/api/forecast?city=${encodeURIComponent(city)}`);
-    if (!res.ok) {
-      // Try to parse JSON error detail from FastAPI; otherwise fall back to text
-      let bodyText = null;
-      try {
-        const errJson = await res.json();
-        // FastAPI wraps errors in { detail: ... }
-        const det = errJson && errJson.detail ? errJson.detail : errJson;
-        if (det && typeof det === 'object') {
-          // show the human message if present
-          bodyText = det.message || det.error || JSON.stringify(det);
-          // expose a helpful link if provided
-          if (det.nominatim_search) {
-            const link = `<div style="margin-top:8px"><a href="${det.nominatim_search}" target="_blank">Search for \"${city}\" on OpenStreetMap (suggestions)</a></div>`;
-            document.getElementById('result').innerHTML = `<div class="card">${bodyText}${link}</div>`;
-          }
-        } else {
-          bodyText = JSON.stringify(det || errJson);
-        }
-      } catch (e) {
-        bodyText = await res.text();
-      }
-      throw new Error(res.status + ' ' + (bodyText || 'Error'));
-    }
-    const data = await res.json();
-    lastData = data;
-    const t = new Date();
-    setStatus('ok', 'Ready — updated ' + t.toLocaleTimeString());
-    renderForecast(data);
-  } catch (err) {
-    setStatus('error', err.message || 'Error fetching forecast');
+    const result = document.getElementById('result');
+    setStatus('loading', 'Looking up ' + city + '…');
     result.textContent = '';
-  }
-});
+    try {
+      const res = await fetch(`/api/forecast?city=${encodeURIComponent(city)}`);
+      if (!res.ok) {
+        let bodyText = null;
+        try {
+          const errJson = await res.json();
+          const det = errJson && errJson.detail ? errJson.detail : errJson;
+          if (det && typeof det === 'object') {
+            bodyText = det.message || det.error || JSON.stringify(det);
+            if (det.nominatim_search) {
+              const link = `<div style="margin-top:8px"><a href="${det.nominatim_search}" target="_blank">Search for \"${city}\" on OpenStreetMap (suggestions)</a></div>`;
+              document.getElementById('result').innerHTML = `<div class="card">${bodyText}${link}</div>`;
+            }
+          } else {
+            bodyText = JSON.stringify(det || errJson);
+          }
+        } catch (e) {
+          bodyText = await res.text();
+        }
+        throw new Error(res.status + ' ' + (bodyText || 'Error'));
+      }
+      const data = await res.json();
+      lastData = data;
+      const t = new Date();
+      setStatus('ok', 'Ready — updated ' + t.toLocaleTimeString());
+      renderForecast(data);
+    } catch (err) {
+      setStatus('error', err.message || 'Error fetching forecast');
+      result.textContent = '';
+    }
+  });
+}
